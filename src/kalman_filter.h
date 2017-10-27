@@ -64,6 +64,12 @@ public:
    */
   void UpdateEKF(const Eigen::VectorXd &z);
 
+  /**
+    * Changes coordinates from cartesian to polar
+    * @param x The predicted state
+    */
+  Eigen::VectorXd CoordinatesToPolar(const Eigen::VectorXd &x);
+
 };
 
 #endif /* KALMAN_FILTER_H_ */

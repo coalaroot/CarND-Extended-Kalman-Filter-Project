@@ -1,4 +1,6 @@
 #include "kalman_filter.h"
+#include <cmath>
+#include <iostream>
 
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
@@ -21,22 +23,60 @@ void KalmanFilter::Init(VectorXd &x_in, MatrixXd &P_in, MatrixXd &F_in,
 }
 
 void KalmanFilter::Predict() {
-  /**
-  TODO:
-    * predict the state
-  */
+  x_ = F_ * x_;
+  MatrixXd Ft = F_.transpose();
+  P_ = F_ * P_ * Ft + Q_;
 }
 
 void KalmanFilter::Update(const VectorXd &z) {
-  /**
-  TODO:
-    * update the state by using Kalman Filter equations
-  */
+  VectorXd y = z - (H_ * x_);
+  MatrixXd Ht = H_.transpose();
+  MatrixXd S = (H_ * P_ * Ht) + R_;
+  MatrixXd Si = S.inverse();
+  MatrixXd K =  P_ * Ht * Si;
+
+  x_ = x_ + (K * y);
+  long x_size = x_.size();
+  MatrixXd I = MatrixXd::Identity(x_size, x_size);
+  P_ = (I - (K * H_)) * P_;
 }
 
 void KalmanFilter::UpdateEKF(const VectorXd &z) {
-  /**
-  TODO:
-    * update the state by using Extended Kalman Filter equations
-  */
+  VectorXd y = z - CoordinatesToPolar(x_);
+
+  // Normalize angle
+  while (y(1) > M_PI) {
+    y(1) -= 2 * M_PI;
+  }
+  while (y(1) < -M_PI) {
+    y(1) += 2 * M_PI;
+  }
+
+  MatrixXd Ht = H_.transpose();
+  MatrixXd S = H_ * P_ * Ht + R_;
+  MatrixXd Si = S.inverse();
+  MatrixXd K =  P_ * Ht * Si;
+
+  x_ = x_ + (K * y);
+  long x_size = x_.size();
+  MatrixXd I = MatrixXd::Identity(x_size, x_size);
+  P_ = (I - K * H_) * P_;
+}
+
+Eigen::VectorXd KalmanFilter::CoordinatesToPolar(const Eigen::VectorXd &x) {
+  VectorXd res = VectorXd(3);
+  float px = x(0);
+  float py = x(1);
+  float vx = x(2);
+  float vy = x(3);
+
+  res(0) = sqrt(px * px + py * py);
+  if(res(0) < .00001) {
+    px += .001;
+    py += .001;
+    res(0) = sqrt(px * px + py * py);
+  }
+  res(1) = atan2(py,px);
+  res(2) = (px*vx+py*vy)/res(0);
+  return res;
 }
